@@ -1,6 +1,6 @@
 {
   "name": "coze-openclaw-plugin",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "OpenClaw Coze tools and bundled skills",
   "type": "module",
   "scripts": {
