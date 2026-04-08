@@ -8,6 +8,7 @@ import {
 import { transcribeSpeech } from "./shared/asr.js";
 import { generateImages } from "./shared/image-gen.js";
 import { synthesizeSpeech } from "./shared/tts.js";
+import { generateVideo } from "./shared/video-gen.js";
 
 type SkillIo = {
   log: (message: string) => void;
@@ -295,6 +296,95 @@ export async function runAsrCli(
     }
     if (result.segments !== undefined) {
       io.log(`Segments: ${result.segments}`);
+    }
+    return 0;
+  } catch (error) {
+    io.error(`Error: ${formatCozeError(error)}`);
+    return 1;
+  }
+}
+
+export async function runVideoCli(
+  args: string[],
+  env: NodeJS.ProcessEnv = process.env,
+  io: SkillIo = createDefaultIo(),
+): Promise<number> {
+  const missingValueFlag = findMissingValueFlag(args, [
+    "--prompt",
+    "--image",
+    "--first-frame",
+    "--last-frame",
+    "--callback-url",
+    "--return-last-frame",
+    "--model",
+    "--max-wait-time",
+    "--resolution",
+    "--ratio",
+    "--duration",
+    "--watermark",
+    "--seed",
+    "--camera-fixed",
+    "--generate-audio",
+    "--header",
+    "-H",
+  ]);
+  if (missingValueFlag) {
+    io.error(`Error: ${missingValueFlag} requires a value`);
+    return 1;
+  }
+
+  const prompt = readArg(args, "--prompt");
+  const firstFrame = readArg(args, "--first-frame");
+  const lastFrame = readArg(args, "--last-frame");
+  const image = readRepeatedArgs(args, ["--image"]);
+
+  if (!prompt && !firstFrame && !lastFrame && image.length === 0) {
+    io.error("Error: at least one of --prompt, --image, --first-frame, or --last-frame is required");
+    return 1;
+  }
+
+  try {
+    const config = await requireConfig(env);
+    const result = await generateVideo(
+      {
+        prompt,
+        image,
+        firstFrame,
+        lastFrame,
+        callbackUrl: readArg(args, "--callback-url"),
+        returnLastFrame: parseBooleanArg(
+          readArg(args, "--return-last-frame"),
+          "--return-last-frame",
+        ),
+        model: readArg(args, "--model"),
+        maxWaitTime: readNumberArg(args, "--max-wait-time"),
+        resolution: readArg(args, "--resolution") as "480p" | "720p" | "1080p" | undefined,
+        ratio: readArg(args, "--ratio") as
+          | "16:9"
+          | "9:16"
+          | "1:1"
+          | "4:3"
+          | "3:4"
+          | "21:9"
+          | "adaptive"
+          | undefined,
+        duration: readNumberArg(args, "--duration"),
+        watermark: parseBooleanArg(readArg(args, "--watermark"), "--watermark"),
+        seed: readNumberArg(args, "--seed"),
+        camerafixed: parseBooleanArg(readArg(args, "--camera-fixed"), "--camera-fixed"),
+        generateAudio: parseBooleanArg(readArg(args, "--generate-audio"), "--generate-audio"),
+        headers: parseHeaders(readRepeatedArgs(args, ["--header", "-H"])),
+      },
+      config,
+    );
+
+    io.log(`Task ID: ${result.taskId}`);
+    io.log(`Status: ${result.status}`);
+    if (result.videoUrl) {
+      io.log(`Video URL: ${result.videoUrl}`);
+    }
+    if (result.lastFrameUrl) {
+      io.log(`Last Frame URL: ${result.lastFrameUrl}`);
     }
     return 0;
   } catch (error) {
