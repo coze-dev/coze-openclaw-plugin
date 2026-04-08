@@ -4,6 +4,7 @@ const hoisted = vi.hoisted(() => ({
   loadCozePluginConfigFromOpenClawConfig: vi.fn(),
   resolveCozeClientConfig: vi.fn(),
   generateImages: vi.fn(),
+  generateVideo: vi.fn(),
   synthesizeSpeech: vi.fn(),
   transcribeSpeech: vi.fn(),
 }));
@@ -26,11 +27,15 @@ vi.mock("./shared/image-gen.js", () => ({
   generateImages: (...args: unknown[]) => hoisted.generateImages(...args),
 }));
 
+vi.mock("./shared/video-gen.js", () => ({
+  generateVideo: (...args: unknown[]) => hoisted.generateVideo(...args),
+}));
+
 vi.mock("./shared/asr.js", () => ({
   transcribeSpeech: (...args: unknown[]) => hoisted.transcribeSpeech(...args),
 }));
 
-const { runAsrCli, runImageCli, runTtsCli } = await import("./skill-cli.js");
+const { runAsrCli, runImageCli, runTtsCli, runVideoCli } = await import("./skill-cli.js");
 
 function createIo() {
   return {
@@ -165,5 +170,111 @@ describe("skill cli", () => {
     expect(code).toBe(1);
     expect(io.errors).toContain("Error: --response-format only supports url");
     expect(hoisted.generateImages).not.toHaveBeenCalled();
+  });
+
+  it("rejects missing values in video options before calling the sdk", async () => {
+    const io = createIo();
+
+    const code = await runVideoCli(["--prompt", "hello", "--first-frame"], {}, io);
+
+    expect(code).toBe(1);
+    expect(io.errors).toContain("Error: --first-frame requires a value");
+    expect(hoisted.generateVideo).not.toHaveBeenCalled();
+  });
+
+  it("requires one of prompt, image, first-frame, or last-frame for video generation", async () => {
+    const io = createIo();
+
+    const code = await runVideoCli([], {}, io);
+
+    expect(code).toBe(1);
+    expect(io.errors).toContain(
+      "Error: at least one of --prompt, --image, --first-frame, or --last-frame is required",
+    );
+    expect(hoisted.generateVideo).not.toHaveBeenCalled();
+  });
+
+  it("passes video generation options through to the sdk wrapper", async () => {
+    hoisted.loadCozePluginConfigFromOpenClawConfig.mockResolvedValue({});
+    hoisted.resolveCozeClientConfig.mockReturnValue({ apiKey: "test-key" });
+    hoisted.generateVideo.mockResolvedValue({
+      taskId: "task-1",
+      status: "succeeded",
+      videoUrl: "https://example.com/video.mp4",
+      lastFrameUrl: "https://example.com/last-frame.png",
+      raw: { id: "task-1", status: "succeeded" },
+    });
+    const io = createIo();
+
+    const code = await runVideoCli(
+      [
+        "--prompt",
+        "hello",
+        "--image",
+        "https://example.com/reference.png",
+        "--first-frame",
+        "https://example.com/first.png",
+        "--last-frame",
+        "https://example.com/last.png",
+        "--model",
+        "doubao-seedance-1-5-pro-251215",
+        "--duration",
+        "6",
+        "--ratio",
+        "9:16",
+        "--resolution",
+        "1080p",
+        "--watermark",
+        "false",
+        "--seed",
+        "42",
+        "--camera-fixed",
+        "true",
+        "--generate-audio",
+        "false",
+        "--return-last-frame",
+        "true",
+        "--max-wait-time",
+        "300",
+        "--callback-url",
+        "https://example.com/callback",
+        "--header",
+        "x-trace-id: 123",
+        "-H",
+        "x-run-mode=test_run",
+      ],
+      {},
+      io,
+    );
+
+    expect(code).toBe(0);
+    expect(hoisted.generateVideo).toHaveBeenCalledWith(
+      {
+        prompt: "hello",
+        image: ["https://example.com/reference.png"],
+        firstFrame: "https://example.com/first.png",
+        lastFrame: "https://example.com/last.png",
+        model: "doubao-seedance-1-5-pro-251215",
+        duration: 6,
+        ratio: "9:16",
+        resolution: "1080p",
+        watermark: false,
+        seed: 42,
+        camerafixed: true,
+        generateAudio: false,
+        returnLastFrame: true,
+        maxWaitTime: 300,
+        callbackUrl: "https://example.com/callback",
+        headers: {
+          "x-run-mode": "test_run",
+          "x-trace-id": "123",
+        },
+      },
+      { apiKey: "test-key" },
+    );
+    expect(io.logs).toContain("Task ID: task-1");
+    expect(io.logs).toContain("Status: succeeded");
+    expect(io.logs).toContain("Video URL: https://example.com/video.mp4");
+    expect(io.logs).toContain("Last Frame URL: https://example.com/last-frame.png");
   });
 });

@@ -47,6 +47,12 @@ export async function createImageGenerationClient(
   return createClient(params, (sdk) => sdk.ImageGenerationClient);
 }
 
+export async function createVideoGenerationClient(
+  params: CozeClientFactoryParams,
+): Promise<InstanceType<CozeSdkModule["VideoGenerationClient"]>> {
+  return createClient(params, (sdk) => sdk.VideoGenerationClient);
+}
+
 export async function createTtsClient(
   params: CozeClientFactoryParams,
 ): Promise<InstanceType<CozeSdkModule["TTSClient"]>> {

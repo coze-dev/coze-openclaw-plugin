@@ -15,6 +15,7 @@
     "src/shared/asr.ts",
     "src/shared/fetch.ts",
     "src/shared/image-gen.ts",
+    "src/shared/video-gen.ts",
     "src/shared/search.ts",
     "src/shared/tts.ts",
     "src/tools/web-fetch.ts",
