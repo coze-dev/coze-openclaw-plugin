@@ -380,7 +380,9 @@ export async function runVideoCli(
 
     io.log(`Task ID: ${result.taskId}`);
     io.log(`Status: ${result.status}`);
-    io.log(`Video URL: ${result.videoUrl}`);
+    if (result.videoUrl) {
+      io.log(`Video URL: ${result.videoUrl}`);
+    }
     if (result.lastFrameUrl) {
       io.log(`Last Frame URL: ${result.lastFrameUrl}`);
     }

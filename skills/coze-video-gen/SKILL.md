@@ -18,7 +18,6 @@ node {skillDir}/scripts/gen.mjs --prompt "A serene mountain landscape with flowi
 node {skillDir}/scripts/gen.mjs --prompt "A cinematic robot walking through neon rain" --duration 6 --ratio 9:16 --resolution 1080p
 node {skillDir}/scripts/gen.mjs --prompt "Animate this concept art" --first-frame "https://example.com/first.png"
 node {skillDir}/scripts/gen.mjs --prompt "Transition from sunrise to night" --first-frame "https://example.com/start.png" --last-frame "https://example.com/end.png" --return-last-frame true
-node {skillDir}/scripts/gen.mjs --prompt "Stylized motion study" --image "https://example.com/reference-1.png" --image "https://example.com/reference-2.png"
 ```
 
 ## Options
@@ -53,4 +52,5 @@ node {skillDir}/scripts/gen.mjs --prompt "Stylized motion study" --image "https:
 - The skill runtime requires `plugins.entries.coze-openclaw-plugin.config.apiKey`.
 - `{skillDir}` means the directory containing this `SKILL.md`.
 - The default model `doubao-seedance-1-5-pro-251215` supports text input plus `first_frame` and `last_frame`. Generic `reference_image` inputs from `--image` may be rejected by that model.
+- Only use `--image` when you have selected a model that explicitly supports `reference_image`.
 - The returned video URL is already hosted with a valid expiration period. Unless the user explicitly needs rehosting or download, use it directly.

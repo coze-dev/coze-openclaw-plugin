@@ -114,13 +114,38 @@ describe("generateVideo", () => {
     });
   });
 
-  it("throws when the sdk does not return a video url", async () => {
+  it("returns task metadata when the task is created but video url is not ready yet", async () => {
     const client = {
       videoGeneration: vi.fn().mockResolvedValue({
         videoUrl: null,
         lastFrameUrl: "",
         response: {
           id: "task-2",
+          status: "running",
+        },
+      }),
+    };
+    hoisted.createVideoGenerationClient.mockResolvedValue(client);
+
+    await expect(generateVideo({ prompt: "still rendering" }, { apiKey: "test-key" })).resolves.toEqual({
+      taskId: "task-2",
+      status: "running",
+      videoUrl: undefined,
+      lastFrameUrl: undefined,
+      raw: {
+        id: "task-2",
+        status: "running",
+      },
+    });
+  });
+
+  it("throws when the sdk reports a failed task without a video url", async () => {
+    const client = {
+      videoGeneration: vi.fn().mockResolvedValue({
+        videoUrl: null,
+        lastFrameUrl: "",
+        response: {
+          id: "task-3",
           status: "failed",
           error_message: "bad request",
         },

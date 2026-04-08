@@ -23,10 +23,14 @@ export type VideoGenerationInput = {
 export type VideoGenerationResult = {
   taskId: string;
   status: VideoGenerationTask["status"];
-  videoUrl: string;
+  videoUrl?: string;
   lastFrameUrl?: string;
   raw: VideoGenerationTask;
 };
+
+function isFailedTask(task: VideoGenerationTask): boolean {
+  return task.status === "failed" || task.status === "cancelled";
+}
 
 function buildContent(input: VideoGenerationInput): Content[] {
   const content: Content[] = [];
@@ -96,14 +100,18 @@ export async function generateVideo(
     generateAudio: input.generateAudio,
   });
 
-  if (!response.videoUrl) {
+  if (!response.response.id) {
+    throw new Error("Video generation did not return a task id");
+  }
+
+  if (!response.videoUrl && isFailedTask(response.response)) {
     throw new Error(getFailureMessage(response.response));
   }
 
   return {
     taskId: response.response.id,
     status: response.response.status,
-    videoUrl: response.videoUrl,
+    videoUrl: response.videoUrl || undefined,
     lastFrameUrl: response.lastFrameUrl || undefined,
     raw: response.response,
   };

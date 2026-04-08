@@ -277,4 +277,24 @@ describe("skill cli", () => {
     expect(io.logs).toContain("Video URL: https://example.com/video.mp4");
     expect(io.logs).toContain("Last Frame URL: https://example.com/last-frame.png");
   });
+
+  it("prints task status even when the video url is not ready yet", async () => {
+    hoisted.loadCozePluginConfigFromOpenClawConfig.mockResolvedValue({});
+    hoisted.resolveCozeClientConfig.mockReturnValue({ apiKey: "test-key" });
+    hoisted.generateVideo.mockResolvedValue({
+      taskId: "task-2",
+      status: "running",
+      videoUrl: undefined,
+      lastFrameUrl: undefined,
+      raw: { id: "task-2", status: "running" },
+    });
+    const io = createIo();
+
+    const code = await runVideoCli(["--prompt", "hello"], {}, io);
+
+    expect(code).toBe(0);
+    expect(io.logs).toContain("Task ID: task-2");
+    expect(io.logs).toContain("Status: running");
+    expect(io.logs).not.toContain("Video URL: undefined");
+  });
 });
